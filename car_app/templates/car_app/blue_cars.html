@@ -1,0 +1,8 @@
+<!-- car_app/templates/car_app/blue_cars.html -->
+{% load static %}
+{% for car in blue_cars %}
+    <li id="car-{{ car.id }}" data-car-id="{{ car.id }}" data-color="{{ car.color }}">
+        <img src="{% static 'car_app/bluecar.png' %}" alt="{{ car.name }}">
+        <p>{{ car.name }}</p>
+    </li>
+{% endfor %}

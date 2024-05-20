@@ -1,0 +1,131 @@
+<!-- car_app/templates/car_app/list_cars.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Car List</title>
+    <style>
+        #car-list li {
+            display: inline-block;
+            margin-right: 10px; /* Adjust margin as needed */
+            text-align: center; /* Center-align the text */
+            width: 300px;
+        }
+
+        #car-list img {
+            max-width: 100%; /* Limit the maximum width of the image */
+            height: auto; /* Ensure proportional scaling */
+        }
+    </style>
+</head>
+
+<body>
+    {% load static %}
+    <h2>Car List</h2>
+
+    <!-- Filter buttons -->
+    <div>
+        <button id="filter-all">All Cars</button>
+        <button id="filter-red">Red Cars</button>
+        <button id="filter-blue">Blue Cars</button>
+    </div>
+
+    <ul id="car-list">
+        {% for car in cars %}
+            <li id="car-{{ car.id }}" data-car-id="{{ car.id }}" data-color="{{ car.color }}">
+                {% if car.color == 'red' or car.color == 'Red' %}
+                <img src="{% static 'car_app/redcar.png' %}" alt="{{ car.name }}">
+                {% elif car.color == 'blue' or car.color == 'Blue' %}
+                <img src="{% static 'car_app/bluecar.png' %}" alt="{{ car.name }}">
+                {% else %}
+                    <!-- Handle other colors or no specific image for other colors -->
+                {% endif %}
+                <p>{{ car.name }}</p>
+            </li>
+        {% endfor %}
+    </ul>
+
+    <!-- Include jQuery and jQuery UI -->
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+
+    <!-- Your script for sortable and filter -->
+    <script>
+        $(document).ready(function () {
+            $("#car-list").sortable({
+                axis: "xy", // Allow sorting along both x and y axes
+                update: function (event, ui) {
+                    var newPositions = $(this).sortable('toArray', { attribute: 'data-car-id' });
+
+                    // Send the new positions to the server with CSRF token
+                    $.ajax({
+                        type: "POST",
+                        url: "/post_switch_car/",
+                        headers: { "X-CSRFToken": getCookie("csrftoken") }, // Include CSRF token
+                        data: { car: newPositions },
+                        success: function (data) {
+                            console.log(data.message);
+                        },
+                        error: function (error) {
+                            console.log("Error updating positions");
+                        }
+                    });
+                }
+            });
+
+            // Function to get CSRF token from cookie
+            function getCookie(name) {
+                var cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    var cookies = document.cookie.split(';');
+                    for (var i = 0; i < cookies.length; i++) {
+                        var cookie = cookies[i].trim();
+                        // Check if the cookie name matches the pattern 'name=value'
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            // Extract and decode the cookie value
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+            // Filter functionality
+             $("#filter-all").click(function (event) {
+                // Prevent the default behavior of the button (which is to submit a form or navigate to a link)
+                event.preventDefault();
+                console.log("Show All Cars button clicked");
+
+                // Reload the page
+                window.location.reload();
+            });
+
+            $("#filter-red").click(function () {
+                $.ajax({
+                    type: "GET",
+                    url: "/sorting_red_cars/",
+                    success: function (data) {
+                        $("#car-list").html(data); // Replace car list with red cars content
+                    },
+                    error: function (error) {
+                        console.log("Error fetching red cars");
+                    }
+                });
+            });
+
+            $("#filter-blue").click(function () {
+                $.ajax({
+                    type: "GET",
+                    url: "/sorting_blue_cars/",
+                    success: function (data) {
+                        $("#car-list").html(data); // Replace car list with blue cars content
+                    },
+                    error: function (error) {
+                        console.log("Error fetching blue cars");
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
