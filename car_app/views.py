@@ -1,3 +1,4 @@
+from django.db.models import When, Case, IntegerField, Value
 from django.http import JsonResponse
 from django.views import View
 from django.shortcuts import render
@@ -25,22 +26,28 @@ class CarView(View):
         else:
             return JsonResponse({'error': 'Invalid request method'}, status=400)
 
+    # @csrf_exempt
+    # def post_switch_car(request):
+    #     data = request.POST.getlist('car[]')  # Assuming you're sending car IDs in the request
+    #
+    #     # Update positions sequentially
+    #     with transaction.atomic():
+    #         for new_pos, car_id in enumerate(data, start=1):
+    #             Car.objects.filter(pk=car_id).update(position=new_pos)
+    #
+    #     return JsonResponse({'message': 'Positions updated successfully'}, status=200)
+
     @csrf_exempt
     def post_switch_car(request):
-        if request.method == 'POST':
-            data = request.POST.getlist('car[]')  # Assuming you're sending car IDs in the request
+        data = request.POST.getlist('car[]')  # List of car IDs in new order
 
-            # Fetch cars ordered by their original positions
-            cars = Car.objects.filter(pk__in=data).order_by('position')
+        # Prepare the case conditions to update positions based on the new order
+        conditions = []
+        for index, car_id in enumerate(data):
+            conditions.append(When(pk=car_id, then=Value(index + 1)))
 
-            # Update positions sequentially
-            with transaction.atomic():
-                for new_pos, car_id in enumerate(data, start=1):
-                    car = cars.get(pk=car_id)
-                    car.position = new_pos
-                    car.save()
+        # Perform the bulk update using Case and When
+        with transaction.atomic():
+            Car.objects.filter(pk__in=data).update(position=Case(*conditions, output_field=IntegerField()))
 
-            return JsonResponse({'message': 'Positions updated successfully'}, status=200)
-        else:
-            return JsonResponse({'error': 'Invalid request method'}, status=400)
-
+        return JsonResponse({'message': 'Positions updated successfully'}, status=200)
